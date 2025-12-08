@@ -15,19 +15,12 @@ public class main_GLEventListener implements GLEventListener {
   private Shader shaderCube, shaderLight;
   private Camera camera;
     
-  /* The constructor is not used to initialise anything */
   public main_GLEventListener(Camera camera) {
     this.camera = camera;
     this.camera.setPosition(new Vec3(4f,6f,15f));
     this.camera.setTarget(new Vec3(0f,0,0f));
   }
   
-  // ***************************************************
-  /*
-   * METHODS DEFINED BY GLEventListener
-   */
-
-  /* Initialisation */
   public void init(GLAutoDrawable drawable) {
     GL3 gl = drawable.getGL().getGL3();
     System.err.println("Chosen GLCapabilities: " + drawable.getChosenGLCapabilities());
@@ -35,14 +28,13 @@ public class main_GLEventListener implements GLEventListener {
     gl.glClearDepth(1.0f);
     gl.glEnable(GL.GL_DEPTH_TEST);
     gl.glDepthFunc(GL.GL_LESS);
-    gl.glFrontFace(GL.GL_CCW);    // default is 'CCW'
-    gl.glEnable(GL.GL_CULL_FACE); // default is 'not enabled'
-    gl.glCullFace(GL.GL_BACK);    // default is 'back', assuming CCW
+    gl.glFrontFace(GL.GL_CCW);    
+    gl.glEnable(GL.GL_CULL_FACE); 
+    gl.glCullFace(GL.GL_BACK);    
     initialise(gl);
     startTime = getSeconds();
   }
   
-  /* Called to indicate the drawing surface has been moved and/or resized  */
   public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
     GL3 gl = drawable.getGL().getGL3();
     gl.glViewport(x, y, width, height);
@@ -51,37 +43,36 @@ public class main_GLEventListener implements GLEventListener {
     camera.setPerspectiveMatrix(p);
   }
 
-  /* Draw */
   public void display(GLAutoDrawable drawable) {
     GL3 gl = drawable.getGL().getGL3();
     render(gl);
   }
 
-  /* Clean up memory, if necessary */
   public void dispose(GLAutoDrawable drawable) {
-    // GL3 gl = drawable.getGL().getGL3();
-    // gl.glDeleteBuffers(1, vertexBufferId, 0);
-    // gl.glDeleteVertexArrays(1, vertexArrayId, 0);
-    // gl.glDeleteBuffers(1, elementBufferId, 0);
   }
 
   // ***************************************************
-  /* THE SCENE
-   * Now define all the methods to handle the scene.
-   * This will be added to in later examples.
-   */
+  // THE SCENE
 
   private Model statue1, statue2, statue3;
+  // Positions for proximity check
+  private Vec3 statue1Pos = new Vec3(3, 0.5f, 0);
+  private Vec3 statue2Pos = new Vec3(-2f, 0.5f, 2f);
+  private Vec3 statue3Pos = new Vec3(-2f, 0.5f, -2f);
+
   private Floor floor;
-  //private FObject fObj;
-  //private Cuboids cuboids;
   private Walls walls;
   private Model sun;
   private Light light;
   private Bee bee;
 
-  // Textures
   private TextureLibrary textures;
+
+  // Animation Variables for Bee Path
+  private Vec3[] waypoints;
+  private int currentWaypointIndex = 0;
+  private float travelProgress = 0.0f;
+  private float travelSpeed = 0.3f; // Adjust to speed up/slow down bee movement
 
   public void initialise(GL3 gl)
   {
@@ -101,85 +92,120 @@ public class main_GLEventListener implements GLEventListener {
     textures.add(gl, "sky", "assets/textures/sky.jpg");
     textures.add(gl, "beeSkin", "assets/textures/beeSkin2.jpg");
 
+    // Initialize waypoints
+    waypoints = new Vec3[] {
+      new Vec3(5, 2, 5),
+      new Vec3(5, 2, -5),
+      new Vec3(-5, 2, -5),
+      new Vec3(-5,2, 5)
+    };
 
     light = new Light(gl, camera);
     Material material = new Material();
-    material.setAmbient(0.15f, 0.15f, 0.15f);   // much lower ambient
-    material.setDiffuse(0.8f, 0.75f, 0.6f);     // reduced diffuse intensity + warm tint
-    material.setSpecular(1.2f, 1.2f, 1.0f);     // smaller specular highlights
+    material.setAmbient(0.15f, 0.15f, 0.15f);   
+    material.setDiffuse(0.8f, 0.75f, 0.6f);     
+    material.setSpecular(1.2f, 1.2f, 1.0f);     
     light.setMaterial(material);
-    light.setPosition(0f, 25f, 0f);           // position it higher and to the side
+    light.setPosition(0f, 25f, 0f);           
 
     floor = new Floor(gl, light, camera, textures.get("snow_ground"));
-    //fObj = new FObject(gl, light, camera);
-    //cuboids = new Cuboids(gl, light, camera);
     walls = new Walls(gl, light, camera, textures);
     bee = new Bee(gl, light, camera, textures);
 
-    Mat4 mSphere = Mat4Transform.translate(3,0.5f,0);
+    // Statue 1
+    Mat4 mSphere = Mat4Transform.translate(statue1Pos);
     mSphere = Mat4.multiply(Mat4Transform.scale(2,4,2),mSphere);
-    statue1 = makeSphere(gl, mSphere,
-                       "assets/shaders/fs_standard_d.txt", 
-                       textures.get("cloud"), null, null);
+    statue1 = makeSphere(gl, mSphere, "assets/shaders/fs_standard_d.txt", textures.get("cloud"), null, null);
 
-    Mat4 mSphere2 = Mat4Transform.translate(-2f,0.5f,2f);
+    // Statue 2
+    Mat4 mSphere2 = Mat4Transform.translate(statue2Pos);
     mSphere2 = Mat4.multiply(Mat4Transform.scale(1.5f,3f,1.5f),mSphere2);
-    statue2 = makeSphere(gl, mSphere2,
-                       "assets/shaders/fs_standard_d.txt", 
-                       textures.get("matrix"), null, null);
+    statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("matrix"), null, null);
 
-    Mat4 mSphere3 = Mat4Transform.translate(-2f,0.5f,-2f);
+    // Statue 3
+    Mat4 mSphere3 = Mat4Transform.translate(statue3Pos);
     mSphere3 = Mat4.multiply(Mat4Transform.scale(2f,4f,2f),mSphere3);
-    statue3 = makeSphere(gl, mSphere3,
-                       "assets/shaders/fs_standard_d.txt", 
-                       textures.get("dog"), null, null);
+    statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("dog"), null, null);
 
-    // Create glowing sun sphere at light position
+    // Sun
     Mat4 mSun = Mat4Transform.translate(0f, 25f, 0f);
     mSun = Mat4.multiply(Mat4Transform.scale(1f, 1f, 1f), mSun);
-    sun = makeSphere(gl, mSun,
-                     "assets/shaders/fs_standard_e.txt",  // emission shader
-                     textures.get("white1x1"), null, textures.get("white1x1"));
+    sun = makeSphere(gl, mSun, "assets/shaders/fs_standard_e.txt", textures.get("white1x1"), null, textures.get("white1x1"));
   
-    bee.setPosition(0f, 15f, 10f);              // move whole bee
-    bee.setRotationAngle(90f);                   // rotate whole bee
-    bee.setRotationAngle(360-90);                   // rotate whole bee
+    // Initial bee setup
+    bee.setPosition(waypoints[0].x, waypoints[0].y, waypoints[0].z);              
+    bee.setRotationAngle(90f);
+    bee.setRotationAngle(180+90f);                   
   }
 
   public void render(GL3 gl) {
     gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
-    //light.setPosition(getLightPosition()); // changing light position each frame
+    
+    // Update Bee Movement
+    updateBeeMovement();
+    
+    // Check Proximity
+    checkProximity();
+
     light.render(gl);
     floor.render(gl);
     walls.render(gl);
     statue1.render(gl);
     statue2.render(gl);
     statue3.render(gl);
-    //cuboids.render(gl);
-    //fObj.render(gl);
-    //sun.render(gl);
-
-    // Move the bee along the same path used by the (previously-moving) light.
-    Vec3 movingPos = getLightPosition();
-    bee.setPosition(movingPos.x, movingPos.y, movingPos.z);
-
+    
     bee.render(gl);
   }
-  
 
-  // **********************************
-  // interaction menu
+  private void updateBeeMovement() {
+    double elapsedTime = getSeconds() - startTime;
+    double dt = 0.016; // Approx delta time for 60fps
 
-  // public void setFAngle(float angle) {
-  //   fObj.setAngle(angle);
-  // }
+    // Path Logic
+    travelProgress += travelSpeed * dt;
+    if (travelProgress >= 1.0f) {
+        travelProgress = 0.0f;
+        currentWaypointIndex = (currentWaypointIndex + 1) % waypoints.length;
+    }
 
-  // public void setCAngle(float angle) {
-  //   cuboids.setAngle(angle);
-  // }
+    Vec3 start = waypoints[currentWaypointIndex];
+    Vec3 end = waypoints[(currentWaypointIndex + 1) % waypoints.length];
 
-  // **********************************
-  // Sphere
+    // Linear Interpolation (Lerp)
+    float x = start.x + (end.x - start.x) * travelProgress;
+    float z = start.z + (end.z - start.z) * travelProgress;
+    
+    // Base Y + Wobble
+    float baseY = start.y + (end.y - start.y) * travelProgress;
+    float wobble = (float)Math.sin(elapsedTime * 2.0) * 0.5f; // Speed 2.0, Height 0.5
+    float y = baseY + wobble;
+
+    bee.setPosition(x, y, z);
+  }
+
+  private void checkProximity() {
+    Vec3 beePos = bee.getPosition();
+    float threshold = 2.5f; // Distance to trigger texture change
+
+    // Helper to check dist and swap texture
+    updateStatueTexture(statue1, statue1Pos, beePos, "cloud", threshold);
+    updateStatueTexture(statue2, statue2Pos, beePos, "matrix", threshold);
+    updateStatueTexture(statue3, statue3Pos, beePos, "dog", threshold);
+  }
+
+  private void updateStatueTexture(Model statue, Vec3 statuePos, Vec3 beePos, String originalTex, float threshold) {
+    // Distance formula: sqrt((x2-x1)^2 + ...)
+    float dx = statuePos.x - beePos.x;
+    float dy = statuePos.y - beePos.y;
+    float dz = statuePos.z - beePos.z;
+    float dist = (float)Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    if (dist < threshold) {
+      statue.getMaterial().setDiffuseMap(textures.get("beeSkin"));
+    } else {
+      statue.getMaterial().setDiffuseMap(textures.get(originalTex));
+    }
+  }
 
   private Model makeSphere(GL3 gl, Mat4 m, String fragmentPath, Texture diffuse, Texture specular, Texture emission) {
     String name = "sphere";
@@ -194,20 +220,6 @@ public class main_GLEventListener implements GLEventListener {
     return new Model(name, mesh, modelMatrix, shader, material, renderer, light, camera);
   }
 
-  // **********************************
-  // Light
-
-    // The light's position is continually being changed, so needs to be calculated for each frame.
-  private Vec3 getLightPosition() {
-    double elapsedTime = getSeconds()-startTime;
-    float x = 7.0f*(float)(Math.sin(Math.toRadians(elapsedTime*50)));
-    float y = 5.4f;
-    float z = -7.0f*(float)(Math.cos(Math.toRadians(elapsedTime*50)));
-    return new Vec3(x,y,z);
-  }
-  // ***************************************************
-  // Bee
-
   public void setBeePosition(float x, float y, float z) {
     bee.setPosition(x, y, z);
   }
@@ -216,17 +228,11 @@ public class main_GLEventListener implements GLEventListener {
     bee.setRotationAngle(angle);
   }
 
-  // ***************************************************
-  // TIME
-  
   private double startTime;
   
   private double getSeconds() {
     return System.currentTimeMillis()/1000.0;
   }
-  
-  // ***************************************************
-  // An array of random numbers
 
   private int NUM_RANDOMS = 1000;
   private float[] randoms;
@@ -237,5 +243,4 @@ public class main_GLEventListener implements GLEventListener {
       randoms[i] = (float)Math.random();
     }
   }
-
 }

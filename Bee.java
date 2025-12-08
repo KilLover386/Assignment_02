@@ -43,7 +43,8 @@ public class Bee {
     Model bodyModel = makeSphere(gl, textures.get("beeSkin"), "body");
     
     // Scale: (2, 3, 2). Local Y is the spine.
-    Mat4 bodyTransform = Mat4Transform.scale(0.5f, 1.7f, 0.5f);     bodyTransformNode = new SGTransformNode("body_scale", bodyTransform);
+    Mat4 bodyTransform = Mat4Transform.scale(0.5f, 1.2f, 0.5f); 
+    bodyTransformNode = new SGTransformNode("body_scale", bodyTransform);
     SGModelNode bodyShape = new SGModelNode("body_shape", bodyModel);
 
     beeRoot.addChild(bodyTransformNode);
@@ -52,13 +53,13 @@ public class Bee {
     // --- ANTENNAE ---
     Model blackModel = makeSphere(gl, textures.get("black1x1"), "antenna_part");
 
-    // UPDATED: Smaller sizes
+    // UPDATED: Shorter base
     float antBaseScaleX = 0.05f; 
-    float antBaseScaleY = 0.4f; 
+    float antBaseScaleY = 0.2f; // Was 0.4, now shorter
     float antBaseScaleZ = 0.05f;
     float antTipScale = 0.1f;  
 
-    // UPDATED: Positioned higher (0.5 is the top of the body sphere)
+    // UPDATED: Positioned higher 
     float antOffsetX = 0.2f;
     float antOffsetY = 0.5f; 
     float antOffsetZ = 0.15f; 
@@ -68,13 +69,15 @@ public class Bee {
         Mat4.multiply(Mat4Transform.translate(-antOffsetX, antOffsetY, antOffsetZ), 
                       Mat4Transform.rotateAroundZ(25))); 
     
+    // Adjusted translation for shorter base
     SGTransformNode lAntBaseTrans = new SGTransformNode("l_ant_base_trans", 
-        Mat4.multiply(Mat4Transform.translate(0, 0.2f, 0), 
+        Mat4.multiply(Mat4Transform.translate(0, 0.1f, 0), // Shift up slightly (half of 0.2)
                       Mat4Transform.scale(antBaseScaleX, antBaseScaleY, antBaseScaleZ)));
     SGModelNode lAntBaseShape = new SGModelNode("l_ant_base_shape", blackModel);
 
+    // Adjusted translation for tip to sit on shorter base
     SGTransformNode lAntTipTrans = new SGTransformNode("l_ant_tip_trans",
-        Mat4.multiply(Mat4Transform.translate(0, 0.45f, 0), 
+        Mat4.multiply(Mat4Transform.translate(0, 0.25f, 0), // Base height 0.2 + a bit
                       Mat4Transform.scale(antTipScale, antTipScale, antTipScale)));
     SGModelNode lAntTipShape = new SGModelNode("l_ant_tip_shape", blackModel);
 
@@ -90,12 +93,12 @@ public class Bee {
                       Mat4Transform.rotateAroundZ(-25))); 
     
     SGTransformNode rAntBaseTrans = new SGTransformNode("r_ant_base_trans", 
-        Mat4.multiply(Mat4Transform.translate(0, 0.2f, 0),
+        Mat4.multiply(Mat4Transform.translate(0, 0.1f, 0),
                       Mat4Transform.scale(antBaseScaleX, antBaseScaleY, antBaseScaleZ)));
     SGModelNode rAntBaseShape = new SGModelNode("r_ant_base_shape", blackModel);
 
     SGTransformNode rAntTipTrans = new SGTransformNode("r_ant_tip_trans",
-        Mat4.multiply(Mat4Transform.translate(0, 0.45f, 0),
+        Mat4.multiply(Mat4Transform.translate(0, 0.25f, 0),
                       Mat4Transform.scale(antTipScale, antTipScale, antTipScale)));
     SGModelNode rAntTipShape = new SGModelNode("r_ant_tip_shape", blackModel);
 
@@ -170,8 +173,8 @@ public class Bee {
     position.y = y;
     position.z = z;
 
+    // Determine heading based on movement
     if (Math.abs(dx) > 0.01f || Math.abs(dz) > 0.01f) {
-      // UPDATED: Added + 180f to flip the direction
       currentHeading = (float)Math.toDegrees(Math.atan2(dx, dz)) + 180f;
     }
     
@@ -195,19 +198,14 @@ public class Bee {
     double dt = now - lastUpdateTime;
     if (dt <= 0) dt = 1e-6;
 
-    double dx = position.x - lastPosition.x;
-    double dy = position.y - lastPosition.y;
-    double dz = position.z - lastPosition.z;
-    double speed = Math.sqrt(dx*dx + dy*dy + dz*dz) / dt;
+    // UPDATED: Much slower flap rate for visibility
+    double baseFlapRate = 12.0; 
+    flapPhase += baseFlapRate * dt; 
 
-    double baseFlapRate = 50.0; 
-    flapPhase += baseFlapRate * dt * (1.0 + speed*0.5); 
-
-    // UPDATED: Max degree 80.0 for very high/low flapping
-    double maxDeg = 80.0;
-    double amplitudeDeg = Math.min(maxDeg, speed * 40.0 + 30.0); 
+    // UPDATED: Fixed high amplitude so it definitely goes up and down
+    double amplitudeDeg = 70.0; 
     double amplitudeRad = Math.toRadians(amplitudeDeg);
-    double baseTiltRad = Math.toRadians(5.0);
+    double baseTiltRad = Math.toRadians(10.0); // Slightly higher base tilt
 
     double flapOffset = amplitudeRad * Math.sin(flapPhase);
 
@@ -224,5 +222,9 @@ public class Bee {
 
   public void render(GL3 gl) {
     beeRoot.draw(gl);
+  }
+
+  public Vec3 getPosition() {
+    return position;
   }
 }
