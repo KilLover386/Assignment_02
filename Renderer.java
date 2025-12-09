@@ -2,10 +2,10 @@ import gmaths.*;
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.util.texture.*;
 
-// OVERLY COMPLICATED???
-// Just use a single method with if tests for each available field?
-
 public class Renderer {
+
+  // Static reference to the spotlight scene object so all models can access it
+  public static Light spotlight = null;
 
   public Renderer() {}
 
@@ -24,16 +24,28 @@ public class Renderer {
     shader.setVec3(gl, "light.specular", light.getMaterial().getSpecular());
   }
 
+  private void doSpotlight(GL3 gl, Shader shader) {
+    // Only send spotlight data if the static field is set and turned on
+    if (spotlight != null && spotlight.isOn()) {
+       shader.setVec3(gl, "spotlight.position", spotlight.getPosition());
+       shader.setVec3(gl, "spotlight.direction", spotlight.getDirection());
+       shader.setFloat(gl, "spotlight.cutoff", spotlight.getCutoff());
+       shader.setVec3(gl, "spotlight.ambient", spotlight.getMaterial().getAmbient());
+       shader.setVec3(gl, "spotlight.diffuse", spotlight.getMaterial().getDiffuse());
+       shader.setVec3(gl, "spotlight.specular", spotlight.getMaterial().getSpecular());
+    } else {
+       // Turn off spotlight effect if null or off by zeroing out intensity
+       shader.setVec3(gl, "spotlight.diffuse", new Vec3(0,0,0));
+       shader.setVec3(gl, "spotlight.specular", new Vec3(0,0,0));
+    }
+  }
+
   private void doBasicMaterial(GL3 gl, Shader shader, Material material) {
     shader.setVec3(gl, "material.ambient", material.getAmbient());
     shader.setVec3(gl, "material.diffuse", material.getDiffuse());
     shader.setVec3(gl, "material.specular", material.getSpecular());
     shader.setFloat(gl, "material.shininess", material.getShininess());
   }
-
-
-  // rename shader textures as diffuse_texture, specular_texture and emission_texture
-  // be careful to match these with GL_TEXTURE0 and GL_TEXTURE1 and GL_TEXTURE2
 
   private void doDiffuseMap(GL3 gl, Shader shader, Texture dm) {
     shader.setInt(gl, "diffuse_texture", 0);  
@@ -55,10 +67,10 @@ public class Renderer {
 
   public void render(GL3 gl, Mesh mesh, Mat4 modelMatrix,  Shader shader, 
       Material material, Light light, Camera camera) {
-    // set shader variables. Be careful that these variables exist in the shader
     shader.use(gl);
     doVertexShaderMatrices(gl, shader, modelMatrix, camera);
     doSingleLight(gl, shader, light);
+    doSpotlight(gl, shader); // Process the spotlight
     doBasicMaterial(gl, shader, material);
     if (material.diffuseMapExists()) {
       Texture dm = material.getDiffuseMap();
@@ -72,9 +84,6 @@ public class Renderer {
       Texture em = material.getEmissionMap();
       doEmissionMap(gl, shader, em);
     }
-
-    // // then render the mesh
     mesh.render(gl);
   }
-
 }

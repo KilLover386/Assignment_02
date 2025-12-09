@@ -1,7 +1,5 @@
 import java.awt.*;
 import java.awt.event.*;
-
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -10,7 +8,9 @@ import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 
-public class main extends JFrame implements ActionListener {
+import gmaths.*;
+
+public class Buzz extends JFrame implements ActionListener {
   
   private static final int WIDTH = 1024;
   private static final int HEIGHT = 768;
@@ -20,14 +20,14 @@ public class main extends JFrame implements ActionListener {
   private final FPSAnimator animator; 
 
   public static void main(String[] args) {
-    main b1 = new main("SG04");
+    Buzz b1 = new Buzz("Assignment 1 - Buzz");
     b1.getContentPane().setPreferredSize(dimension);
     b1.pack();
     b1.setVisible(true);
     b1.canvas.requestFocusInWindow();
   }
 
-  public main(String textForTitleBar) {
+  public Buzz(String textForTitleBar) {
     super(textForTitleBar);
     GLCapabilities glcapabilities = new GLCapabilities(GLProfile.get(GLProfile.GL3));
     canvas = new GLCanvas(glcapabilities);
@@ -38,17 +38,15 @@ public class main extends JFrame implements ActionListener {
     canvas.addKeyListener(new MyKeyboardInput(camera));
     getContentPane().add(canvas, BorderLayout.CENTER);
 
+    // UPDATED: Interface buttons relevant to the assignment
     JPanel p = new JPanel();
-      JButton b = new JButton("F angle 0");
+      JButton b = new JButton("Light On/Off");
       b.addActionListener(this);
       p.add(b);
-      b = new JButton("F angle 180");
+      b = new JButton("Spotlight On/Off");
       b.addActionListener(this);
       p.add(b);
-      b = new JButton("Cuboid angle 0");
-      b.addActionListener(this);
-      p.add(b);
-      b = new JButton("Cuboid angle 45");
+      b = new JButton("Pose Mode");
       b.addActionListener(this);
       p.add(b);
     this.add(p, BorderLayout.SOUTH);
@@ -67,25 +65,22 @@ public class main extends JFrame implements ActionListener {
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'actionPerformed'");
+    // Logic to handle button clicks without crashing
+    if (e.getActionCommand().equalsIgnoreCase("Light On/Off")) {
+       System.out.println("Light toggle pressed");
+       // glEventListener.toggleGlobalLight(); // Uncomment when implemented
+    }
+    else if (e.getActionCommand().equalsIgnoreCase("Spotlight On/Off")) {
+       System.out.println("Spotlight toggle pressed");
+       // glEventListener.toggleSpotlight(); // Uncomment when implemented
+    }
+    else if (e.getActionCommand().equalsIgnoreCase("Pose Mode")) {
+       System.out.println("Pose Mode toggle pressed");
+    }
   }
-  
-  /*public void actionPerformed(ActionEvent e) {
-    if (e.getActionCommand().equalsIgnoreCase("F angle 0")) {
-      glEventListener.setFAngle(0);
-    }
-    else if (e.getActionCommand().equalsIgnoreCase("F angle 180")) {
-      glEventListener.setFAngle(180);
-    }
-    else if (e.getActionCommand().equalsIgnoreCase("Cuboid angle 0")) {
-      glEventListener.setCAngle(0);
-    }
-    else if (e.getActionCommand().equalsIgnoreCase("Cuboid angle 45")) {
-      glEventListener.setCAngle(45);
-    }
-  }*/
 }
+
+// --- Helper Classes moved here to prevent "NoClassDefFoundError" ---
 
 class MyKeyboardInput extends KeyAdapter  {
   private Camera camera;
@@ -126,18 +121,11 @@ class MyMouseInput extends MouseMotionAdapter {
     this.camera = camera;
   }
   
-    /**
-   * mouse is used to control camera position
-   *
-   * @param e  instance of MouseEvent
-   */    
   public void mouseDragged(MouseEvent e) {
     Point ms = e.getPoint();
     float sensitivity = 0.001f;
     float dx=(float) (ms.x-lastpoint.x)*sensitivity;
     float dy=(float) (ms.y-lastpoint.y)*sensitivity;
-    //System.out.println("dy,dy: "+dx+","+dy);
-    // need to include shift key here as used as a modifier with key presses as well
     int mask = MouseEvent.BUTTON1_DOWN_MASK & MouseEvent.SHIFT_DOWN_MASK;
     if (e.getModifiersEx()==MouseEvent.BUTTON1_DOWN_MASK
         || (e.getModifiersEx() & mask) == mask) {
@@ -146,11 +134,6 @@ class MyMouseInput extends MouseMotionAdapter {
     lastpoint = ms;
   }
 
-  /**
-   * mouse is used to control camera position
-   *
-   * @param e  instance of MouseEvent
-   */  
   public void mouseMoved(MouseEvent e) {   
     lastpoint = e.getPoint(); 
   }

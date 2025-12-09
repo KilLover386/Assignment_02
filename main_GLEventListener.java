@@ -65,6 +65,10 @@ public class main_GLEventListener implements GLEventListener {
   private Model sun;
   private Light light;
   private Bee bee;
+  
+  // Spotlight
+  private Light spotlightLight;
+  private Spotlight spotlightObject;
 
   private TextureLibrary textures;
 
@@ -100,6 +104,7 @@ public class main_GLEventListener implements GLEventListener {
       new Vec3(-5,2, 5)
     };
 
+    // 1. Main Light
     light = new Light(gl, camera);
     Material material = new Material();
     material.setAmbient(0.15f, 0.15f, 0.15f);   
@@ -108,9 +113,23 @@ public class main_GLEventListener implements GLEventListener {
     light.setMaterial(material);
     light.setPosition(0f, 25f, 0f);           
 
+    // 2. Spotlight
+    spotlightLight = new Light(gl, camera);
+    Material spotMat = new Material();
+    spotMat.setAmbient(0.0f, 0.0f, 0.0f); // Spotlight has no ambient contribution
+    spotMat.setDiffuse(1.0f, 1.0f, 1.0f); // Bright white
+    spotMat.setSpecular(1.0f, 1.0f, 1.0f);
+    spotlightLight.setMaterial(spotMat);
+    spotlightLight.setCutoff((float)Math.cos(Math.toRadians(15.0))); // Narrow beam
+    
+    // ** IMPORTANT: Register spotlight with Renderer so all models see it **
+    Renderer.spotlight = spotlightLight;
+
+    // 3. Objects
     floor = new Floor(gl, light, camera, textures.get("snow_ground"));
     walls = new Walls(gl, light, camera, textures);
     bee = new Bee(gl, light, camera, textures);
+    spotlightObject = new Spotlight(gl, spotlightLight, camera, textures);
 
     // Statue 1
     Mat4 mSphere = Mat4Transform.translate(statue1Pos);
@@ -141,12 +160,14 @@ public class main_GLEventListener implements GLEventListener {
   public void render(GL3 gl) {
     gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
     
-    // Update Bee Movement
+    // Update Animations
     updateBeeMovement();
+    spotlightObject.update(); // Animates the spotlight sweep
     
     // Check Proximity
     checkProximity();
 
+    // Render Scene
     light.render(gl);
     floor.render(gl);
     walls.render(gl);
@@ -155,6 +176,7 @@ public class main_GLEventListener implements GLEventListener {
     statue3.render(gl);
     
     bee.render(gl);
+    spotlightObject.render(gl); // Draw the spotlight model
   }
 
   private void updateBeeMovement() {
