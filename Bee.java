@@ -23,7 +23,7 @@ public class Bee {
 
   public Bee(GL3 gl, Light light, Camera camera, TextureLibrary textures) {
     this.position = new Vec3(0f, 5f, 0f);
-    this.rotationAngle = 90f; 
+    this.rotationAngle = -90f; 
     this.currentHeading = 0f;
     this.light = light;
     this.camera = camera;
@@ -174,9 +174,16 @@ public class Bee {
   }
 
   private void updateTransform() {
-    Mat4 transform = Mat4Transform.translate(position);
+    Mat4 transform = Mat4Transform.translate(position); 
+
     transform = Mat4.multiply(transform, Mat4Transform.rotateAroundY(currentHeading));
+    //transform = Mat4.multiply(transform, Mat4Transform.rotateAroundY(180)); 
+
+    // [FIX] If the bee is upside down, checking the rotationAngle might help.
+    // If it was 90, try -90 or 0 depending on your model. 
+    // However, sticking to your request, the hierarchy rotation is here:
     transform = Mat4.multiply(transform, Mat4Transform.rotateAroundX(rotationAngle)); 
+    
     beeRoot.setTransform(transform);
 
     double now = System.currentTimeMillis() / 1000.0;

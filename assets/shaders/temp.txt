@@ -1,6 +1,5 @@
 #version 330 core
 
-// [FIX] Using 'a' prefix to match your Vertex Shader outputs
 in vec3 aPos;
 in vec3 aNormal;
 in vec2 aTexCoord;
@@ -10,6 +9,7 @@ out vec4 fragColor;
 uniform sampler2D diffuse_texture;
 uniform vec3 viewPos;
 
+// Structure for the Main Light (Sun)
 struct Light {
   vec3 position;
   vec3 ambient;
@@ -18,7 +18,7 @@ struct Light {
 };
 uniform Light light;
 
-// Spotlight Structure
+// Structure for the Spotlight (Matches Renderer.java)
 struct SpotLight {
   vec3 position;
   vec3 direction;
@@ -53,7 +53,6 @@ vec3 CalcSpotLight(SpotLight l, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(l.position - fragPos);
     
     // Check if inside the cone
-    // theta is the cosine of the angle. Larger cosine = smaller angle.
     float theta = dot(lightDir, normalize(-l.direction));
     
     if(theta > l.cutoff) {       
@@ -61,7 +60,6 @@ vec3 CalcSpotLight(SpotLight l, vec3 normal, vec3 fragPos, vec3 viewDir) {
         vec3 reflectDir = reflect(-lightDir, normal);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
         
-        // Spotlight effect
         // Note: l.ambient is usually 0 for spotlights to avoid lighting up everything
         vec3 ambient = l.ambient * texture(diffuse_texture, aTexCoord).rgb;
         vec3 diffuse = l.diffuse * diff * texture(diffuse_texture, aTexCoord).rgb;

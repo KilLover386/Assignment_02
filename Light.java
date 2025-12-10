@@ -28,7 +28,7 @@ public class Light {
     
     // Default spotlight values (pointing down, 12.5 degree cone)
     this.direction = new Vec3(0,-1,0);
-    this.cutoff = (float)Math.cos(Math.toRadians(12.5f)); 
+    this.cutoff = (float)Math.cos(Math.toRadians(35.0f)); 
 
     modelMatrix = new Mat4(1);
     modelMatrix = Mat4.multiply(Mat4Transform.scale(10f,10f,10f), modelMatrix);

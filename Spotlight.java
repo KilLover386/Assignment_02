@@ -23,7 +23,14 @@ public class Spotlight {
     // 1. Animate
     double time = System.currentTimeMillis() / 1000.0;
     float angle = 45.0f * (float)Math.sin(time); 
-    headTransform.setTransform(Mat4Transform.rotateAroundZ(angle)); 
+    
+    // [FIX] Re-create the Translation matrix to keep the head at the top of the arm
+    Mat4 transform = Mat4Transform.translate(4f, 10.5f, 0f);
+    // Multiply by the Rotation matrix to animate it
+    transform = Mat4.multiply(transform, Mat4Transform.rotateAroundZ(angle));
+    
+    // Apply the combined transform
+    headTransform.setTransform(transform); 
     
     spotlightRoot.update(); 
 
@@ -36,6 +43,8 @@ public class Spotlight {
     
     // Direction calculation (Rotating around Z)
     float rad = (float)Math.toRadians(angle);
+    // [FIX] Standard rotation logic: x = -sin(angle), y = -cos(angle)
+    // Your previous logic was correct for a light pointing 'down' rotating around Z.
     float dirX = -(float)Math.sin(rad); 
     float dirY = -(float)Math.cos(rad);
     Vec3 direction = new Vec3(dirX, dirY, 0f); 
@@ -43,7 +52,7 @@ public class Spotlight {
     
     light.setPosition(pos);
     light.setDirection(direction);
-  }
+}
 
   public void render(GL3 gl) {
     spotlightRoot.draw(gl);

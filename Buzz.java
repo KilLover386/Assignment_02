@@ -42,7 +42,12 @@ public class Buzz extends JFrame implements ActionListener {
       JButton b = new JButton("Light On/Off");
       b.addActionListener(this);
       p.add(b);
-      b = new JButton("Spotlight On/Off");
+      b = new JButton("Spotlight Bulb");
+      b.setActionCommand("SpotLight");
+      b.addActionListener(this);
+      p.add(b);
+      b = new JButton("Spotlight Motor");
+      b.setActionCommand("SpotMotor");
       b.addActionListener(this);
       p.add(b);
       b = new JButton("Toggle Animation/Pose");
@@ -87,8 +92,11 @@ public class Buzz extends JFrame implements ActionListener {
     if (cmd.equalsIgnoreCase("Light On/Off")) {
        glEventListener.toggleGlobalLight();
     }
-    else if (cmd.equalsIgnoreCase("Spotlight On/Off")) {
-       glEventListener.toggleSpotlight();
+    else if (cmd.equalsIgnoreCase("SpotLight")) { // Changed command
+       glEventListener.toggleSpotLight();
+    }
+    else if (cmd.equalsIgnoreCase("SpotMotor")) { // New command
+       glEventListener.toggleSpotAnim();
     }
     else if (cmd.equalsIgnoreCase("Toggle Animation/Pose")) {
        glEventListener.toggleAnimationMode();

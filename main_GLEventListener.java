@@ -13,7 +13,8 @@ public class main_GLEventListener implements GLEventListener {
   
   // Toggles
   private boolean lightOn = true;
-  private boolean spotOn = true;
+  private boolean spotLightOn = true;
+  private boolean spotAnimOn = true;
   private boolean animationMode = true; 
     
   public main_GLEventListener(Camera camera) {
@@ -152,10 +153,15 @@ public class main_GLEventListener implements GLEventListener {
     gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
     
     // Updates
-    if (spotOn) spotlightObject.update(); 
-    if (animationMode) updateBeeMovement();
+    if (spotAnimOn) {
+        spotlightObject.update(); 
+    }
     
+    if (animationMode) updateBeeMovement();
     checkProximity();
+
+    // Tell the light if the Bulb is ON
+    spotlightLight.setOn(spotLightOn);
 
     // Light Handling [FIX]
     if (!lightOn) {
@@ -170,7 +176,7 @@ public class main_GLEventListener implements GLEventListener {
         light.getMaterial().setSpecular(0.6f, 0.6f, 0.6f);
     }
     
-    spotlightLight.setOn(spotOn);
+    //spotlightLight.setOn(spotOn);
 
     floor.render(gl);
     walls.render(gl);
@@ -259,7 +265,8 @@ public class main_GLEventListener implements GLEventListener {
   }
 
   public void toggleGlobalLight() { lightOn = !lightOn; }
-  public void toggleSpotlight() { spotOn = !spotOn; }
+  public void toggleSpotLight()   { spotLightOn = !spotLightOn; } // Bulb
+  public void toggleSpotAnim()    { spotAnimOn = !spotAnimOn; }   // Motor
   public void toggleAnimationMode() { animationMode = !animationMode; }
 
   private double startTime;
