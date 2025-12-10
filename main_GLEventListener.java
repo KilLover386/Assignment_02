@@ -90,6 +90,13 @@ public class main_GLEventListener implements GLEventListener {
     textures.add(gl, "snow_ground", "assets/textures/snow_ground.jpg");
     textures.add(gl, "sky", "assets/textures/sky.jpg");
     textures.add(gl, "beeSkin", "assets/textures/beeSkin2.jpg");
+    textures.add(gl, "metal", "assets/textures/metal.jpg");
+    textures.add(gl, "metal2", "assets/textures/metal2.jpg");
+    textures.add(gl, "stone", "assets/textures/stone.jpg");
+    textures.add(gl, "stone2", "assets/textures/stone2.jpg");
+    textures.add(gl, "wood", "assets/textures/wood.jpg");
+    textures.add(gl, "wood2", "assets/textures/wood2.jpg");
+    
 
     // Waypoints for continuous flight
     waypoints = new Vec3[] {
@@ -128,15 +135,15 @@ public class main_GLEventListener implements GLEventListener {
     // Statues (Spheres)
     Mat4 mSphere = Mat4Transform.translate(statue1Pos);
     mSphere = Mat4.multiply(Mat4Transform.scale(2,4,2),mSphere);
-    statue1 = makeSphere(gl, mSphere, "assets/shaders/fs_standard_d.txt", textures.get("cloud"), null, null, mStone);
+    statue1 = makeSphere(gl, mSphere, "assets/shaders/fs_standard_d.txt", textures.get("metal"), null, null, mStone);
 
     Mat4 mSphere2 = Mat4Transform.translate(statue2Pos);
     mSphere2 = Mat4.multiply(Mat4Transform.scale(1.5f,3f,1.5f),mSphere2);
-    statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("matrix"), null, null, mMetal);
+    statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("stone"), null, null, mMetal);
 
     Mat4 mSphere3 = Mat4Transform.translate(statue3Pos);
     mSphere3 = Mat4.multiply(Mat4Transform.scale(2f,4f,2f),mSphere3);
-    statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("dog"), null, null, mWood);
+    statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("wood"), null, null, mWood);
   
     bee.setPosition(waypoints[0].x, waypoints[0].y, waypoints[0].z);              
   }
@@ -214,9 +221,9 @@ public class main_GLEventListener implements GLEventListener {
     Vec3 beePos = bee.getPosition();
     float threshold = 3.0f; 
 
-    boolean near1 = updateStatueTexture(statue1, statue1Pos, beePos, "cloud", threshold);
-    boolean near2 = updateStatueTexture(statue2, statue2Pos, beePos, "matrix", threshold);
-    boolean near3 = updateStatueTexture(statue3, statue3Pos, beePos, "dog", threshold);
+    boolean near1 = updateStatueTexture(statue1, statue1Pos, beePos, "metal", threshold);
+    boolean near2 = updateStatueTexture(statue2, statue2Pos, beePos, "stone", threshold);
+    boolean near3 = updateStatueTexture(statue3, statue3Pos, beePos, "wood", threshold);
 
     bee.reactToProximity(near1 || near2 || near3);
   }
@@ -228,7 +235,9 @@ public class main_GLEventListener implements GLEventListener {
     float dist = (float)Math.sqrt(dx*dx + dy*dy + dz*dz);
 
     if (dist < threshold) {
-      statue.getMaterial().setDiffuseMap(textures.get("beeSkin"));
+      if (originalTex.equals("metal")) { statue.getMaterial().setDiffuseMap(textures.get("metal2")); }
+      else if (originalTex.equals("stone")) { statue.getMaterial().setDiffuseMap(textures.get("stone2")); }
+      else if (originalTex.equals("wood")) {statue.getMaterial().setDiffuseMap(textures.get("wood2"));}
       return true;
     } else {
       statue.getMaterial().setDiffuseMap(textures.get(originalTex));
