@@ -4,7 +4,6 @@ import com.jogamp.opengl.util.texture.*;
 
 public class Renderer {
 
-  // Static reference to the spotlight scene object so all models can access it
   public static Light spotlight = null;
 
   public Renderer() {}
@@ -25,7 +24,6 @@ public class Renderer {
   }
 
   private void doSpotlight(GL3 gl, Shader shader) {
-    // Only send spotlight data if the static field is set and turned on
     if (spotlight != null && spotlight.isOn()) {
        shader.setVec3(gl, "spotlight.position", spotlight.getPosition());
        shader.setVec3(gl, "spotlight.direction", spotlight.getDirection());
@@ -34,7 +32,6 @@ public class Renderer {
        shader.setVec3(gl, "spotlight.diffuse", spotlight.getMaterial().getDiffuse());
        shader.setVec3(gl, "spotlight.specular", spotlight.getMaterial().getSpecular());
     } else {
-       // Turn off spotlight effect if null or off by zeroing out intensity
        shader.setVec3(gl, "spotlight.diffuse", new Vec3(0,0,0));
        shader.setVec3(gl, "spotlight.specular", new Vec3(0,0,0));
     }
@@ -70,7 +67,7 @@ public class Renderer {
     shader.use(gl);
     doVertexShaderMatrices(gl, shader, modelMatrix, camera);
     doSingleLight(gl, shader, light);
-    doSpotlight(gl, shader); // Process the spotlight
+    doSpotlight(gl, shader);
     doBasicMaterial(gl, shader, material);
     if (material.diffuseMapExists()) {
       Texture dm = material.getDiffuseMap();

@@ -38,7 +38,6 @@ public class Buzz extends JFrame implements ActionListener {
     canvas.addKeyListener(new MyKeyboardInput(camera));
     getContentPane().add(canvas, BorderLayout.CENTER);
 
-    // UPDATED: Interface buttons relevant to the assignment
     JPanel p = new JPanel();
       JButton b = new JButton("Light On/Off");
       b.addActionListener(this);
@@ -65,22 +64,17 @@ public class Buzz extends JFrame implements ActionListener {
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    // Logic to handle button clicks without crashing
     if (e.getActionCommand().equalsIgnoreCase("Light On/Off")) {
-       System.out.println("Light toggle pressed");
-       // glEventListener.toggleGlobalLight(); // Uncomment when implemented
+       glEventListener.toggleGlobalLight();
     }
     else if (e.getActionCommand().equalsIgnoreCase("Spotlight On/Off")) {
-       System.out.println("Spotlight toggle pressed");
-       // glEventListener.toggleSpotlight(); // Uncomment when implemented
+       glEventListener.toggleSpotlight();
     }
     else if (e.getActionCommand().equalsIgnoreCase("Pose Mode")) {
-       System.out.println("Pose Mode toggle pressed");
+       glEventListener.toggleAnimationMode();
     }
   }
 }
-
-// --- Helper Classes moved here to prevent "NoClassDefFoundError" ---
 
 class MyKeyboardInput extends KeyAdapter  {
   private Camera camera;

@@ -18,6 +18,7 @@ struct Light {
 
 uniform Light light;
 
+// Spotlight Structure
 struct SpotLight {
   vec3 position;
   vec3 direction;
@@ -54,14 +55,18 @@ vec3 CalcSpotLight(SpotLight l, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(l.position - fragPos);
     float theta = dot(lightDir, normalize(-l.direction));
     
+    // Check if inside the spotlight cone
     if(theta > l.cutoff) {       
         float diff = max(dot(normal, lightDir), 0.0);
         vec3 reflectDir = reflect(-lightDir, normal);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
         
+        // Spotlight usually has less ambient, more focused diffuse/specular
         vec3 ambient = l.ambient * texture(diffuse_texture, aTexCoord).rgb;
         vec3 diffuse = l.diffuse * diff * texture(diffuse_texture, aTexCoord).rgb;
         vec3 specular = l.specular * spec * material.specular;
+        
+        // Optional: Intensity fade at edges could go here, but hard cutoff for now
         return (ambient + diffuse + specular);
     } else {
         return vec3(0.0); 
@@ -72,8 +77,10 @@ void main() {
   vec3 norm = normalize(aNormal);
   vec3 viewDir = normalize(viewPos - aPos);
   
+  // 1. Calculate General Light
   vec3 result = CalcPointLight(light, norm, aPos, viewDir);
-  // Add spotlight contribution
+  
+  // 2. Add Spotlight Calculation
   result += CalcSpotLight(spotlight, norm, aPos, viewDir);
 
   fragColor = vec4(result, 1.0);
