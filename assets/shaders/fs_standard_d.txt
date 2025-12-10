@@ -18,7 +18,7 @@ struct Light {
 
 uniform Light light;
 
-// Spotlight Structure
+// Spotlight Structure matches the logic described
 struct SpotLight {
   vec3 position;
   vec3 direction;
@@ -39,6 +39,7 @@ struct Material {
   
 uniform Material material;
 
+// Standard Point Light calculation (Global Light)
 vec3 CalcPointLight(Light l, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(l.position - fragPos);
     float diff = max(dot(normal, lightDir), 0.0);
@@ -51,24 +52,26 @@ vec3 CalcPointLight(Light l, vec3 normal, vec3 fragPos, vec3 viewDir) {
     return (ambient + diffuse + specular);
 }
 
+// Spotlight Calculation (Hard Cutoff)
 vec3 CalcSpotLight(SpotLight l, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(l.position - fragPos);
+    
+    // Check if fragment is inside the spotlight cone
+    // theta is the cosine of the angle. Larger cosine = smaller angle = closer to center.
     float theta = dot(lightDir, normalize(-l.direction));
     
-    // Check if inside the spotlight cone
     if(theta > l.cutoff) {       
+        // Inside the cone: Do lighting calculations
         float diff = max(dot(normal, lightDir), 0.0);
         vec3 reflectDir = reflect(-lightDir, normal);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
         
-        // Spotlight usually has less ambient, more focused diffuse/specular
         vec3 ambient = l.ambient * texture(diffuse_texture, aTexCoord).rgb;
         vec3 diffuse = l.diffuse * diff * texture(diffuse_texture, aTexCoord).rgb;
         vec3 specular = l.specular * spec * material.specular;
-        
-        // Optional: Intensity fade at edges could go here, but hard cutoff for now
         return (ambient + diffuse + specular);
     } else {
+        // Outside the cone: No light from spotlight
         return vec3(0.0); 
     }
 }
@@ -80,7 +83,7 @@ void main() {
   // 1. Calculate General Light
   vec3 result = CalcPointLight(light, norm, aPos, viewDir);
   
-  // 2. Add Spotlight Calculation
+  // 2. Add Spotlight Calculation (Additive)
   result += CalcSpotLight(spotlight, norm, aPos, viewDir);
 
   fragColor = vec4(result, 1.0);

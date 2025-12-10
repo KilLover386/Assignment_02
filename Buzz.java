@@ -3,11 +3,11 @@ import java.awt.event.*;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JLabel;
 
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
-
 import gmaths.*;
 
 public class Buzz extends JFrame implements ActionListener {
@@ -45,9 +45,27 @@ public class Buzz extends JFrame implements ActionListener {
       b = new JButton("Spotlight On/Off");
       b.addActionListener(this);
       p.add(b);
-      b = new JButton("Pose Mode");
+      b = new JButton("Toggle Animation/Pose");
       b.addActionListener(this);
       p.add(b);
+      
+      p.add(new JLabel(" | Poses: "));
+      
+      b = new JButton("Statue 1");
+      b.setActionCommand("Pose1");
+      b.addActionListener(this);
+      p.add(b);
+      
+      b = new JButton("Statue 2");
+      b.setActionCommand("Pose2");
+      b.addActionListener(this);
+      p.add(b);
+      
+      b = new JButton("Statue 3");
+      b.setActionCommand("Pose3");
+      b.addActionListener(this);
+      p.add(b);
+
     this.add(p, BorderLayout.SOUTH);
 
     addWindowListener(new WindowAdapter() {
@@ -64,25 +82,32 @@ public class Buzz extends JFrame implements ActionListener {
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    if (e.getActionCommand().equalsIgnoreCase("Light On/Off")) {
+    String cmd = e.getActionCommand();
+    
+    if (cmd.equalsIgnoreCase("Light On/Off")) {
        glEventListener.toggleGlobalLight();
     }
-    else if (e.getActionCommand().equalsIgnoreCase("Spotlight On/Off")) {
+    else if (cmd.equalsIgnoreCase("Spotlight On/Off")) {
        glEventListener.toggleSpotlight();
     }
-    else if (e.getActionCommand().equalsIgnoreCase("Pose Mode")) {
+    else if (cmd.equalsIgnoreCase("Toggle Animation/Pose")) {
        glEventListener.toggleAnimationMode();
+    }
+    else if (cmd.equalsIgnoreCase("Pose1")) {
+       glEventListener.jumpToPose(0); // Req 3.8: Jump to statue 1
+    }
+    else if (cmd.equalsIgnoreCase("Pose2")) {
+       glEventListener.jumpToPose(1); // Jump to statue 2
+    }
+    else if (cmd.equalsIgnoreCase("Pose3")) {
+       glEventListener.jumpToPose(2); // Jump to statue 3
     }
   }
 }
 
 class MyKeyboardInput extends KeyAdapter  {
   private Camera camera;
-  
-  public MyKeyboardInput(Camera camera) {
-    this.camera = camera;
-  }
-  
+  public MyKeyboardInput(Camera camera) { this.camera = camera; }
   public void keyPressed(KeyEvent e) {
     Camera.Movement m = Camera.Movement.NO_MOVEMENT;
     if (e.getModifiersEx() == java.awt.event.InputEvent.SHIFT_DOWN_MASK)
@@ -110,11 +135,7 @@ class MyKeyboardInput extends KeyAdapter  {
 class MyMouseInput extends MouseMotionAdapter {
   private Point lastpoint;
   private Camera camera;
-  
-  public MyMouseInput(Camera camera) {
-    this.camera = camera;
-  }
-  
+  public MyMouseInput(Camera camera) { this.camera = camera; }
   public void mouseDragged(MouseEvent e) {
     Point ms = e.getPoint();
     float sensitivity = 0.001f;
@@ -127,8 +148,5 @@ class MyMouseInput extends MouseMotionAdapter {
     }
     lastpoint = ms;
   }
-
-  public void mouseMoved(MouseEvent e) {   
-    lastpoint = e.getPoint(); 
-  }
+  public void mouseMoved(MouseEvent e) { lastpoint = e.getPoint(); }
 }

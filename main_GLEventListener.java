@@ -1,24 +1,20 @@
 import gmaths.*;
-
 import java.nio.*;
 import com.jogamp.common.nio.*;
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.util.*;
 import com.jogamp.opengl.util.awt.*;
 import com.jogamp.opengl.util.glsl.*;
-
 import com.jogamp.opengl.util.texture.*;
   
 public class main_GLEventListener implements GLEventListener {
   
-  private static final boolean DISPLAY_SHADERS = false;
-  private Shader shaderCube, shaderLight;
   private Camera camera;
   
   // Toggles
   private boolean lightOn = true;
   private boolean spotOn = true;
-  private boolean animationMode = true; // true = continuous, false = pose
+  private boolean animationMode = true; 
     
   public main_GLEventListener(Camera camera) {
     this.camera = camera;
@@ -28,7 +24,6 @@ public class main_GLEventListener implements GLEventListener {
   
   public void init(GLAutoDrawable drawable) {
     GL3 gl = drawable.getGL().getGL3();
-    System.err.println("Chosen GLCapabilities: " + drawable.getChosenGLCapabilities());
     gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
     gl.glClearDepth(1.0f);
     gl.glEnable(GL.GL_DEPTH_TEST);
@@ -54,6 +49,7 @@ public class main_GLEventListener implements GLEventListener {
   }
 
   public void dispose(GLAutoDrawable drawable) {
+    textures.destroy(drawable.getGL().getGL3());
   }
 
   // ***************************************************
@@ -62,32 +58,25 @@ public class main_GLEventListener implements GLEventListener {
   private Model statue1, statue2, statue3;
   // Positions
   private Vec3 statue1Pos = new Vec3(3, 0.5f, 0);
-  private Vec3 statue2Pos = new Vec3(-2f, 0.5f, 2f);
-  private Vec3 statue3Pos = new Vec3(-2f, 0.5f, -2f);
+  private Vec3 statue2Pos = new Vec3(-3f, 0.5f, 3f);
+  private Vec3 statue3Pos = new Vec3(-3f, 0.5f, -3f);
 
   private Floor floor;
   private Walls walls;
-  private Model sun;
   private Light light;
   private Bee bee;
   
   private Light spotlightLight;
   private Spotlight spotlightObject;
-
   private TextureLibrary textures;
 
+  // Animation Variables
   private Vec3[] waypoints;
   private int currentWaypointIndex = 0;
   private float travelProgress = 0.0f;
-  private float travelSpeed = 0.3f;
+  private float travelSpeed = 0.5f;
 
-  // Materials
-  private Material mStone, mMetal, mWood;
-
-  public void initialise(GL3 gl)
-  {
-    createRandomNumbers();
-
+  public void initialise(GL3 gl) {
     textures = new TextureLibrary();
     textures.add(gl, "diffuse_container", "assets/textures/container2.jpg");
     textures.add(gl, "specular_container", "assets/textures/container2_specular.jpg");
@@ -102,32 +91,25 @@ public class main_GLEventListener implements GLEventListener {
     textures.add(gl, "sky", "assets/textures/sky.jpg");
     textures.add(gl, "beeSkin", "assets/textures/beeSkin2.jpg");
 
-    // Initialize waypoints
+    // Waypoints for continuous flight
     waypoints = new Vec3[] {
-      new Vec3(5, 2, 5),
-      new Vec3(5, 2, -5),
-      new Vec3(-5, 2, -5),
-      new Vec3(-5,2, 5)
+      new Vec3(statue1Pos.x + 2, 3, statue1Pos.z), // Near Statue 1
+      new Vec3(0, 5, 0),                           // Center/High
+      new Vec3(statue2Pos.x, 3, statue2Pos.z + 2), // Near Statue 2
+      new Vec3(0, 2, -5),                          // Random spot
+      new Vec3(statue3Pos.x + 2, 3, statue3Pos.z)  // Near Statue 3
     };
 
-    // Define Materials
-    // Stone: Low specular, matte
-    mStone = new Material(new Vec3(0.1f, 0.1f, 0.1f), new Vec3(0.6f, 0.6f, 0.6f), new Vec3(0.1f, 0.1f, 0.1f), 4.0f);
-    // Metal: High specular, shiny
-    mMetal = new Material(new Vec3(0.2f, 0.2f, 0.2f), new Vec3(0.7f, 0.7f, 0.7f), new Vec3(1.0f, 1.0f, 1.0f), 64.0f);
-    // Wood: Medium specular
-    mWood = new Material(new Vec3(0.1f, 0.1f, 0.1f), new Vec3(0.6f, 0.4f, 0.2f), new Vec3(0.2f, 0.2f, 0.2f), 8.0f);
+    // Materials
+    Material mStone = new Material(new Vec3(0.1f, 0.1f, 0.1f), new Vec3(0.6f, 0.6f, 0.6f), new Vec3(0.1f, 0.1f, 0.1f), 4.0f);
+    Material mMetal = new Material(new Vec3(0.2f, 0.2f, 0.2f), new Vec3(0.7f, 0.7f, 0.7f), new Vec3(1.0f, 1.0f, 1.0f), 64.0f);
+    Material mWood = new Material(new Vec3(0.1f, 0.1f, 0.1f), new Vec3(0.6f, 0.4f, 0.2f), new Vec3(0.2f, 0.2f, 0.2f), 8.0f);
 
-    // 1. Main Light
+    // Light
     light = new Light(gl, camera);
-    Material lightMat = new Material();
-    lightMat.setAmbient(0.1f, 0.1f, 0.1f); // Low ambient so spotlight pops
-    lightMat.setDiffuse(0.6f, 0.6f, 0.6f);
-    lightMat.setSpecular(0.6f, 0.6f, 0.6f);
-    light.setMaterial(lightMat);
     light.setPosition(0f, 25f, 0f);           
 
-    // 2. Spotlight
+    // Spotlight
     spotlightLight = new Light(gl, camera);
     Material spotMat = new Material();
     spotMat.setAmbient(0.0f, 0.0f, 0.0f); 
@@ -135,37 +117,28 @@ public class main_GLEventListener implements GLEventListener {
     spotMat.setSpecular(1.0f, 1.0f, 1.0f);
     spotlightLight.setMaterial(spotMat);
     spotlightLight.setCutoff((float)Math.cos(Math.toRadians(15.0))); 
-    Renderer.spotlight = spotlightLight; // Register
+    Renderer.spotlight = spotlightLight;
 
-    // 3. Objects
+    // Objects
     floor = new Floor(gl, light, camera, textures.get("snow_ground"));
     walls = new Walls(gl, light, camera, textures);
     bee = new Bee(gl, light, camera, textures);
     spotlightObject = new Spotlight(gl, spotlightLight, camera, textures);
 
-    // Statue 1 (Stone)
+    // Statues (Spheres)
     Mat4 mSphere = Mat4Transform.translate(statue1Pos);
     mSphere = Mat4.multiply(Mat4Transform.scale(2,4,2),mSphere);
     statue1 = makeSphere(gl, mSphere, "assets/shaders/fs_standard_d.txt", textures.get("cloud"), null, null, mStone);
 
-    // Statue 2 (Metal)
     Mat4 mSphere2 = Mat4Transform.translate(statue2Pos);
     mSphere2 = Mat4.multiply(Mat4Transform.scale(1.5f,3f,1.5f),mSphere2);
     statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("matrix"), null, null, mMetal);
 
-    // Statue 3 (Wood)
     Mat4 mSphere3 = Mat4Transform.translate(statue3Pos);
     mSphere3 = Mat4.multiply(Mat4Transform.scale(2f,4f,2f),mSphere3);
     statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("dog"), null, null, mWood);
-
-    // Sun
-    Mat4 mSun = Mat4Transform.translate(0f, 25f, 0f);
-    mSun = Mat4.multiply(Mat4Transform.scale(1f, 1f, 1f), mSun);
-    sun = makeSphere(gl, mSun, "assets/shaders/fs_standard_e.txt", textures.get("white1x1"), null, textures.get("white1x1"), new Material());
   
     bee.setPosition(waypoints[0].x, waypoints[0].y, waypoints[0].z);              
-    bee.setRotationAngle(90f);
-    bee.setRotationAngle(180+90f);                   
   }
 
   public void render(GL3 gl) {
@@ -177,25 +150,14 @@ public class main_GLEventListener implements GLEventListener {
     
     checkProximity();
 
-    // Render Logic based on Toggles
-    if (lightOn) light.render(gl);
-    
-    // Pass 'null' to renderer if light is off (Renderer handles this?) 
-    // Actually simpler to just set the light material properties to black temporarily
-    // But for now, we rely on the Renderer using the light object we pass.
-    // If we want to turn it off, we can just not render the visual sphere, but the light effect persists.
-    // To truly turn off light effect, we'd modify the Light object properties.
-    // A quick hack for the "visual" switch is just skipping light.render().
-    // For the "lighting effect", we'd need to zero out its intensity.
-    // Let's assume the button toggles the *effect*.
-    
+    // Light Handling [FIX]
     if (!lightOn) {
-        // Dim the light for this frame
-        light.getMaterial().setDiffuse(0,0,0);
-        light.getMaterial().setSpecular(0,0,0);
-        light.getMaterial().setAmbient(0,0,0);
+        // Dim the scene (Moonlight effect) instead of full black
+        light.getMaterial().setDiffuse(0.2f, 0.2f, 0.2f); 
+        light.getMaterial().setSpecular(0.2f, 0.2f, 0.2f);
+        light.getMaterial().setAmbient(0.05f, 0.05f, 0.05f);
     } else {
-        // Restore
+        // Full daylight
         light.getMaterial().setAmbient(0.1f, 0.1f, 0.1f);
         light.getMaterial().setDiffuse(0.6f, 0.6f, 0.6f);
         light.getMaterial().setSpecular(0.6f, 0.6f, 0.6f);
@@ -229,22 +191,37 @@ public class main_GLEventListener implements GLEventListener {
     float x = start.x + (end.x - start.x) * travelProgress;
     float z = start.z + (end.z - start.z) * travelProgress;
     float baseY = start.y + (end.y - start.y) * travelProgress;
-    float wobble = (float)Math.sin(elapsedTime * 2.0) * 0.5f; 
+    float wobble = (float)Math.sin(elapsedTime * 4.0) * 0.5f; 
     float y = baseY + wobble;
 
     bee.setPosition(x, y, z);
   }
 
-  private void checkProximity() {
-    Vec3 beePos = bee.getPosition();
-    float threshold = 2.5f; 
-
-    updateStatueTexture(statue1, statue1Pos, beePos, "cloud", threshold);
-    updateStatueTexture(statue2, statue2Pos, beePos, "matrix", threshold);
-    updateStatueTexture(statue3, statue3Pos, beePos, "dog", threshold);
+  public void jumpToPose(int index) {
+      if (animationMode) return;
+      
+      Vec3 target = new Vec3(0,0,0);
+      switch(index) {
+          case 0: target = new Vec3(statue1Pos.x + 2.5f, 2, statue1Pos.z); break; 
+          case 1: target = new Vec3(statue2Pos.x, 2, statue2Pos.z + 2.5f); break; 
+          case 2: target = new Vec3(statue3Pos.x + 2.5f, 2, statue3Pos.z); break; 
+      }
+      bee.setPosition(target.x, target.y, target.z);
+      bee.setRotationAngle(90f); // Ensure it stays horizontal
   }
 
-  private void updateStatueTexture(Model statue, Vec3 statuePos, Vec3 beePos, String originalTex, float threshold) {
+  private void checkProximity() {
+    Vec3 beePos = bee.getPosition();
+    float threshold = 3.0f; 
+
+    boolean near1 = updateStatueTexture(statue1, statue1Pos, beePos, "cloud", threshold);
+    boolean near2 = updateStatueTexture(statue2, statue2Pos, beePos, "matrix", threshold);
+    boolean near3 = updateStatueTexture(statue3, statue3Pos, beePos, "dog", threshold);
+
+    bee.reactToProximity(near1 || near2 || near3);
+  }
+
+  private boolean updateStatueTexture(Model statue, Vec3 statuePos, Vec3 beePos, String originalTex, float threshold) {
     float dx = statuePos.x - beePos.x;
     float dy = statuePos.y - beePos.y;
     float dz = statuePos.z - beePos.z;
@@ -252,8 +229,10 @@ public class main_GLEventListener implements GLEventListener {
 
     if (dist < threshold) {
       statue.getMaterial().setDiffuseMap(textures.get("beeSkin"));
+      return true;
     } else {
       statue.getMaterial().setDiffuseMap(textures.get(originalTex));
+      return false;
     }
   }
 
@@ -262,47 +241,18 @@ public class main_GLEventListener implements GLEventListener {
     Mesh mesh = new Mesh(gl, Sphere.vertices.clone(), Sphere.indices.clone());
     Mat4 modelMatrix = m;
     Shader shader = new Shader(gl, "assets/shaders/vs_standard.txt", fragmentPath);
-    
-    // Use the passed material, but set the texture maps
     Material material = mat.clone();
     material.setDiffuseMap(diffuse);
     material.setSpecularMap(specular);
     material.setEmissionMap(emission);
-    
     Renderer renderer = new Renderer();
     return new Model(name, mesh, modelMatrix, shader, material, renderer, light, camera);
   }
 
-  // Toggle Methods
-  public void toggleGlobalLight() {
-      lightOn = !lightOn;
-  }
-  
-  public void toggleSpotlight() {
-      spotOn = !spotOn;
-  }
-  
-  public void toggleAnimationMode() {
-      animationMode = !animationMode;
-      // If switching to pose mode, maybe reset bee?
-      if (!animationMode) {
-          bee.setPosition(0, 5, 0); // Center
-      }
-  }
+  public void toggleGlobalLight() { lightOn = !lightOn; }
+  public void toggleSpotlight() { spotOn = !spotOn; }
+  public void toggleAnimationMode() { animationMode = !animationMode; }
 
   private double startTime;
-  
-  private double getSeconds() {
-    return System.currentTimeMillis()/1000.0;
-  }
-
-  private int NUM_RANDOMS = 1000;
-  private float[] randoms;
-  
-  private void createRandomNumbers() {
-    randoms = new float[NUM_RANDOMS];
-    for (int i=0; i<NUM_RANDOMS; ++i) {
-      randoms[i] = (float)Math.random();
-    }
-  }
+  private double getSeconds() { return System.currentTimeMillis()/1000.0; }
 }

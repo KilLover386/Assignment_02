@@ -10,30 +10,26 @@ public class Bee {
   private float currentHeading;
   private Light light;
   private Camera camera;
+  
+  // Hierarchy nodes for animation
   private SGTransformNode bodyTransformNode;
-
-  private SGTransformNode leftWingRoot;
-  private SGTransformNode leftWingPivot;
-  private SGTransformNode leftWingShapeTransform;
-
-  private SGTransformNode rightWingRoot;
-  private SGTransformNode rightWingPivot;
-  private SGTransformNode rightWingShapeTransform;
+  private SGTransformNode leftWingPivot, rightWingPivot;
+  private SGTransformNode leftEyeTransform, rightEyeTransform; 
 
   private double lastUpdateTime;
-  private Vec3 lastPosition;
   private double flapPhase = 0.0;
+  private float targetEyeScale = 1.0f;
+  private float currentEyeScale = 1.0f;
 
   public Bee(GL3 gl, Light light, Camera camera, TextureLibrary textures) {
     this.position = new Vec3(0f, 5f, 0f);
-    this.rotationAngle = 0f;
+    this.rotationAngle = 90f; 
     this.currentHeading = 0f;
     this.light = light;
     this.camera = camera;
     buildBeeStructure(gl, textures);
 
     lastUpdateTime = System.currentTimeMillis() / 1000.0;
-    lastPosition = new Vec3(position.x, position.y, position.z);
   }
 
   private void buildBeeStructure(GL3 gl, TextureLibrary textures) {
@@ -41,8 +37,6 @@ public class Bee {
 
     // --- BODY ---
     Model bodyModel = makeSphere(gl, textures.get("beeSkin"), "body");
-    
-    // Scale: (2, 3, 2). Local Y is the spine.
     Mat4 bodyTransform = Mat4Transform.scale(0.5f, 1.2f, 0.5f); 
     bodyTransformNode = new SGTransformNode("body_scale", bodyTransform);
     SGModelNode bodyShape = new SGModelNode("body_shape", bodyModel);
@@ -50,105 +44,99 @@ public class Bee {
     beeRoot.addChild(bodyTransformNode);
     bodyTransformNode.addChild(bodyShape);
 
+    // --- TAIL (STINGER) ---
+    // [FIX] Made much thinner (0.08) to look pointy. Kept connection at -0.5.
+    Model blackModel = makeSphere(gl, textures.get("black1x1"), "black_part");
+    SGTransformNode tailTrans = new SGTransformNode("tail", 
+        Mat4.multiply(Mat4Transform.translate(0, -0.5f, 0.0f), 
+                      Mat4Transform.scale(0.08f, 0.35f, 0.08f))); 
+    SGModelNode tailShape = new SGModelNode("tail_shape", blackModel);
+    bodyTransformNode.addChild(tailTrans);
+    tailTrans.addChild(tailShape);
+
+    // --- EYES ---
+    Model eyeModel = makeSphere(gl, textures.get("white1x1"), "eye");
+    // Left Eye
+    SGTransformNode lEyeRoot = new SGTransformNode("l_eye_root", Mat4Transform.translate(-0.15f, 0.4f, 0.15f));
+    leftEyeTransform = new SGTransformNode("l_eye_scale", Mat4Transform.scale(0.15f, 0.15f, 0.15f));
+    SGModelNode lEyeShape = new SGModelNode("l_eye_shape", eyeModel);
+    bodyTransformNode.addChild(lEyeRoot);
+    lEyeRoot.addChild(leftEyeTransform);
+    leftEyeTransform.addChild(lEyeShape);
+
+    // Right Eye
+    SGTransformNode rEyeRoot = new SGTransformNode("r_eye_root", Mat4Transform.translate(0.15f, 0.4f, 0.15f));
+    rightEyeTransform = new SGTransformNode("r_eye_scale", Mat4Transform.scale(0.15f, 0.15f, 0.15f));
+    SGModelNode rEyeShape = new SGModelNode("r_eye_shape", eyeModel);
+    bodyTransformNode.addChild(rEyeRoot);
+    rEyeRoot.addChild(rightEyeTransform);
+    rightEyeTransform.addChild(rEyeShape);
+
     // --- ANTENNAE ---
-    Model blackModel = makeSphere(gl, textures.get("black1x1"), "antenna_part");
+    float antBaseScale = 0.05f; 
+    float antLen = 0.3f;
+    float tipScale = 0.08f; 
 
-    // UPDATED: Shorter base
-    float antBaseScaleX = 0.05f; 
-    float antBaseScaleY = 0.2f; // Was 0.4, now shorter
-    float antBaseScaleZ = 0.05f;
-    float antTipScale = 0.1f;  
-
-    // UPDATED: Positioned higher 
-    float antOffsetX = 0.2f;
-    float antOffsetY = 0.5f; 
-    float antOffsetZ = 0.15f; 
-
-    // -- Left Antenna --
+    // Left Antenna
+    // [FIX] Moved up to 0.6f
     SGTransformNode lAntRoot = new SGTransformNode("l_ant_root", 
-        Mat4.multiply(Mat4Transform.translate(-antOffsetX, antOffsetY, antOffsetZ), 
-                      Mat4Transform.rotateAroundZ(25))); 
-    
-    // Adjusted translation for shorter base
-    SGTransformNode lAntBaseTrans = new SGTransformNode("l_ant_base_trans", 
-        Mat4.multiply(Mat4Transform.translate(0, 0.1f, 0), // Shift up slightly (half of 0.2)
-                      Mat4Transform.scale(antBaseScaleX, antBaseScaleY, antBaseScaleZ)));
-    SGModelNode lAntBaseShape = new SGModelNode("l_ant_base_shape", blackModel);
-
-    // Adjusted translation for tip to sit on shorter base
-    SGTransformNode lAntTipTrans = new SGTransformNode("l_ant_tip_trans",
-        Mat4.multiply(Mat4Transform.translate(0, 0.25f, 0), // Base height 0.2 + a bit
-                      Mat4Transform.scale(antTipScale, antTipScale, antTipScale)));
+        Mat4.multiply(Mat4Transform.translate(-0.2f, 0.6f, 0.0f), 
+                      Mat4Transform.rotateAroundZ(25)));
+    SGTransformNode lAntShapeTrans = new SGTransformNode("l_ant_stick", Mat4Transform.scale(antBaseScale, antLen, antBaseScale));
+    SGModelNode lAntShape = new SGModelNode("l_ant_stick_shape", blackModel);
+    SGTransformNode lAntTipTrans = new SGTransformNode("l_ant_tip", 
+        Mat4.multiply(Mat4Transform.translate(0.0f, 0.18f, 0.0f), 
+                      Mat4Transform.scale(tipScale, tipScale, tipScale)));
     SGModelNode lAntTipShape = new SGModelNode("l_ant_tip_shape", blackModel);
-
     bodyTransformNode.addChild(lAntRoot);
-      lAntRoot.addChild(lAntBaseTrans);
-        lAntBaseTrans.addChild(lAntBaseShape);
-      lAntRoot.addChild(lAntTipTrans);
-        lAntTipTrans.addChild(lAntTipShape);
+    lAntRoot.addChild(lAntShapeTrans); lAntShapeTrans.addChild(lAntShape);
+    lAntRoot.addChild(lAntTipTrans); lAntTipTrans.addChild(lAntTipShape);
 
-    // -- Right Antenna --
+    // Right Antenna
+    // [FIX] Moved up to 0.6f
     SGTransformNode rAntRoot = new SGTransformNode("r_ant_root", 
-        Mat4.multiply(Mat4Transform.translate(antOffsetX, antOffsetY, antOffsetZ), 
-                      Mat4Transform.rotateAroundZ(-25))); 
-    
-    SGTransformNode rAntBaseTrans = new SGTransformNode("r_ant_base_trans", 
-        Mat4.multiply(Mat4Transform.translate(0, 0.1f, 0),
-                      Mat4Transform.scale(antBaseScaleX, antBaseScaleY, antBaseScaleZ)));
-    SGModelNode rAntBaseShape = new SGModelNode("r_ant_base_shape", blackModel);
-
-    SGTransformNode rAntTipTrans = new SGTransformNode("r_ant_tip_trans",
-        Mat4.multiply(Mat4Transform.translate(0, 0.25f, 0),
-                      Mat4Transform.scale(antTipScale, antTipScale, antTipScale)));
+        Mat4.multiply(Mat4Transform.translate(0.2f, 0.6f, 0.0f), 
+                      Mat4Transform.rotateAroundZ(-25)));
+    SGTransformNode rAntShapeTrans = new SGTransformNode("r_ant_stick", Mat4Transform.scale(antBaseScale, antLen, antBaseScale));
+    SGModelNode rAntShape = new SGModelNode("r_ant_stick_shape", blackModel);
+    SGTransformNode rAntTipTrans = new SGTransformNode("r_ant_tip", 
+        Mat4.multiply(Mat4Transform.translate(0.0f, 0.18f, 0.0f), 
+                      Mat4Transform.scale(tipScale, tipScale, tipScale)));
     SGModelNode rAntTipShape = new SGModelNode("r_ant_tip_shape", blackModel);
-
     bodyTransformNode.addChild(rAntRoot);
-      rAntRoot.addChild(rAntBaseTrans);
-        rAntBaseTrans.addChild(rAntBaseShape);
-      rAntRoot.addChild(rAntTipTrans);
-        rAntTipTrans.addChild(rAntTipShape);
+    rAntRoot.addChild(rAntShapeTrans); rAntShapeTrans.addChild(rAntShape);
+    rAntRoot.addChild(rAntTipTrans); rAntTipTrans.addChild(rAntTipShape);
 
 
     // --- WINGS ---
     Model wingModel = makeSphere(gl, textures.get("white1x1"), "wing");
-
-    float attachX = 0.5f;       
-    float attachY = 0.0f;       
-
-    float wingScaleX = 1.2f;    
-    float wingScaleY = 0.1f;   
-    float wingScaleZ = 0.3f;    
-    float wingHalfLength = 0.6f;
-
+    float wingLen = 1.0f; float wingWidth = 0.4f; float wingThick = 0.05f; 
+    
     // Right Wing
-    Mat4 rightRootMat = Mat4.multiply(Mat4Transform.translate(attachX, attachY, 0f), 
-                                      Mat4Transform.rotateAroundX(90)); 
-    rightWingRoot = new SGTransformNode("rightWing_root", rightRootMat);
-    rightWingPivot = new SGTransformNode("rightWing_pivot", new Mat4(1));
-    Mat4 rightWingShapeMat = Mat4.multiply(Mat4Transform.translate(wingHalfLength, 0f, 0f),
-                                           Mat4Transform.scale(wingScaleX, wingScaleY, wingScaleZ));
-    rightWingShapeTransform = new SGTransformNode("rightWing_shape_transform", rightWingShapeMat);
-    SGModelNode rightWingShape = new SGModelNode("rightWing_shape", wingModel);
+    SGTransformNode rAnchor = new SGTransformNode("r_wing_anchor", Mat4Transform.translate(0.25f, 0.2f, 0f));
+    rightWingPivot = new SGTransformNode("r_wing_pivot", new Mat4(1));
+    SGTransformNode rWingOffset = new SGTransformNode("r_wing_offset",
+        Mat4.multiply(Mat4Transform.translate(wingLen*0.5f, 0f, 0f), 
+                      Mat4Transform.scale(wingLen, wingWidth, wingThick)));
+    SGModelNode rWingShape = new SGModelNode("r_wing_shape", wingModel);
 
-    bodyTransformNode.addChild(rightWingRoot);
-      rightWingRoot.addChild(rightWingPivot);
-        rightWingPivot.addChild(rightWingShapeTransform);
-          rightWingShapeTransform.addChild(rightWingShape);
+    bodyTransformNode.addChild(rAnchor);
+    rAnchor.addChild(rightWingPivot);
+    rightWingPivot.addChild(rWingOffset);
+    rWingOffset.addChild(rWingShape);
 
     // Left Wing
-    Mat4 leftRootMat = Mat4.multiply(Mat4Transform.translate(-attachX, attachY, 0f), 
-                                     Mat4Transform.rotateAroundX(90));
-    leftWingRoot = new SGTransformNode("leftWing_root", leftRootMat);
-    leftWingPivot = new SGTransformNode("leftWing_pivot", new Mat4(1));
-    Mat4 leftWingShapeMat = Mat4.multiply(Mat4Transform.translate(-wingHalfLength, 0f, 0f),
-                                          Mat4Transform.scale(wingScaleX, wingScaleY, wingScaleZ));
-    leftWingShapeTransform = new SGTransformNode("leftWing_shape_transform", leftWingShapeMat);
-    SGModelNode leftWingShape = new SGModelNode("leftWing_shape", wingModel);
+    SGTransformNode lAnchor = new SGTransformNode("l_wing_anchor", Mat4Transform.translate(-0.25f, 0.2f, 0f));
+    leftWingPivot = new SGTransformNode("l_wing_pivot", new Mat4(1));
+    SGTransformNode lWingOffset = new SGTransformNode("l_wing_offset",
+        Mat4.multiply(Mat4Transform.translate(-wingLen*0.5f, 0f, 0f), 
+                      Mat4Transform.scale(wingLen, wingWidth, wingThick)));
+    SGModelNode lWingShape = new SGModelNode("l_wing_shape", wingModel);
 
-    bodyTransformNode.addChild(leftWingRoot);
-      leftWingRoot.addChild(leftWingPivot);
-        leftWingPivot.addChild(leftWingShapeTransform);
-          leftWingShapeTransform.addChild(leftWingShape);
+    bodyTransformNode.addChild(lAnchor);
+    lAnchor.addChild(leftWingPivot);
+    leftWingPivot.addChild(lWingOffset);
+    lWingOffset.addChild(lWingShape);
 
     beeRoot.update();
   }
@@ -159,8 +147,6 @@ public class Bee {
     Shader shader = new Shader(gl, "assets/shaders/vs_standard.txt", "assets/shaders/fs_standard_d.txt");
     Material material = new Material(new Vec3(0.8f, 0.8f, 0.8f), new Vec3(0.8f, 0.8f, 0.8f), new Vec3(0.5f, 0.5f, 0.5f), 32.0f);
     material.setDiffuseMap(diffuse);
-    material.setSpecularMap(null);
-    material.setEmissionMap(null);
     Renderer renderer = new Renderer();
     return new Model(partName, mesh, modelMatrix, shader, material, renderer, light, camera);
   }
@@ -168,16 +154,12 @@ public class Bee {
   public void setPosition(float x, float y, float z) {
     float dx = x - position.x;
     float dz = z - position.z;
-    
     position.x = x;
     position.y = y;
     position.z = z;
-
-    // Determine heading based on movement
     if (Math.abs(dx) > 0.01f || Math.abs(dz) > 0.01f) {
-      currentHeading = (float)Math.toDegrees(Math.atan2(dx, dz)) + 180f;
+      currentHeading = (float)Math.toDegrees(Math.atan2(dx, dz)) + 180f; 
     }
-    
     updateTransform();
   }
 
@@ -186,45 +168,45 @@ public class Bee {
     updateTransform();
   }
 
+  // [FIX] Adjusted target scale (1.7) so eyes don't get huge
+  public void reactToProximity(boolean isClose) {
+    targetEyeScale = isClose ? 1.7f : 1.0f; 
+  }
+
   private void updateTransform() {
     Mat4 transform = Mat4Transform.translate(position);
     transform = Mat4.multiply(transform, Mat4Transform.rotateAroundY(currentHeading));
-    transform = Mat4.multiply(transform, Mat4Transform.rotateAroundX(rotationAngle));
-
+    transform = Mat4.multiply(transform, Mat4Transform.rotateAroundX(rotationAngle)); 
     beeRoot.setTransform(transform);
 
-    // --- Animation ---
     double now = System.currentTimeMillis() / 1000.0;
     double dt = now - lastUpdateTime;
     if (dt <= 0) dt = 1e-6;
 
-    // UPDATED: Much slower flap rate for visibility
-    double baseFlapRate = 12.0; 
+    double baseFlapRate = 20.0; 
     flapPhase += baseFlapRate * dt; 
+    float maxFlapAngle = 60.0f; 
+    float angle = maxFlapAngle * (float)Math.sin(flapPhase);
 
-    // UPDATED: Fixed high amplitude so it definitely goes up and down
-    double amplitudeDeg = 70.0; 
-    double amplitudeRad = Math.toRadians(amplitudeDeg);
-    double baseTiltRad = Math.toRadians(10.0); // Slightly higher base tilt
+    rightWingPivot.setTransform(Mat4Transform.rotateAroundY(angle));
+    leftWingPivot.setTransform(Mat4Transform.rotateAroundY(-angle));
 
-    double flapOffset = amplitudeRad * Math.sin(flapPhase);
-
-    rightWingPivot.setTransform(Mat4Transform.rotateAroundZ((float)(baseTiltRad + flapOffset)));
-    leftWingPivot.setTransform(Mat4Transform.rotateAroundZ((float)(-baseTiltRad + -flapOffset)));
+    float scaleSpeed = 5.0f * (float)dt;
+    if (currentEyeScale < targetEyeScale) currentEyeScale = Math.min(targetEyeScale, currentEyeScale + scaleSpeed);
+    else if (currentEyeScale > targetEyeScale) currentEyeScale = Math.max(targetEyeScale, currentEyeScale - scaleSpeed);
+    
+    float eyeBaseSize = 0.15f;
+    float finalScale = eyeBaseSize * currentEyeScale;
+    leftEyeTransform.setTransform(Mat4Transform.scale(finalScale, finalScale, finalScale));
+    rightEyeTransform.setTransform(Mat4Transform.scale(finalScale, finalScale, finalScale));
 
     lastUpdateTime = now;
-    lastPosition.x = position.x;
-    lastPosition.y = position.y;
-    lastPosition.z = position.z;
-
     beeRoot.update();
   }
 
   public void render(GL3 gl) {
     beeRoot.draw(gl);
   }
-
-  public Vec3 getPosition() {
-    return position;
-  }
+  
+  public Vec3 getPosition() { return position; }
 }
