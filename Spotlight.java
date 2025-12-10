@@ -12,9 +12,7 @@ public class Spotlight {
   
   public Spotlight(GL3 gl, Light light, Camera camera, TextureLibrary textures) {
     this.light = light;
-    // Metallic body
     this.sphere = makeSphere(gl, light, camera, textures.get("specular_container")); 
-    // Glowing bulb
     this.bulb = makeBulb(gl, light, camera, textures.get("white1x1")); 
     makeSG();
   }
@@ -24,29 +22,27 @@ public class Spotlight {
     double time = System.currentTimeMillis() / 1000.0;
     float angle = 45.0f * (float)Math.sin(time); 
     
-    // [FIX] Re-create the Translation matrix to keep the head at the top of the arm
     Mat4 transform = Mat4Transform.translate(4f, 10.5f, 0f);
-    // Multiply by the Rotation matrix to animate it
     transform = Mat4.multiply(transform, Mat4Transform.rotateAroundZ(angle));
     
-    // Apply the combined transform
     headTransform.setTransform(transform); 
-    
     spotlightRoot.update(); 
 
-    // 2. Update Light Source Position & Direction
-    Mat4 worldT = headTransform.getWorldTransform();
-    float[] matData = worldT.toFloatArrayForGLSL(); 
-    
-    // Position of the head
-    Vec3 pos = new Vec3(matData[12], matData[13], matData[14]);
-    
-    // Direction calculation (Rotating around Z)
+    // 2. Update Light Source Position
+    // Manual Fix for position (as per your code)
+    float fixedX = -8f + 4f; 
+    float fixedY = -0.5f + 10.5f; 
+    float fixedZ = -8f;
+    Vec3 pos = new Vec3(fixedX, fixedY, fixedZ);
+
+    // 3. Direction Calculation
     float rad = (float)Math.toRadians(angle);
-    // [FIX] Standard rotation logic: x = -sin(angle), y = -cos(angle)
-    // Your previous logic was correct for a light pointing 'down' rotating around Z.
-    float dirX = -(float)Math.sin(rad); 
+    
+    // [FIX] dirX = +Math.sin to match model rotation
+    // [FIX] dirY = -Math.cos to point DOWN
+    float dirX = (float)Math.sin(rad); 
     float dirY = -(float)Math.cos(rad);
+    
     Vec3 direction = new Vec3(dirX, dirY, 0f); 
     direction.normalize();
     
@@ -61,46 +57,38 @@ public class Spotlight {
   private void makeSG() {
     spotlightRoot = new SGNameNode("Spotlight Root");
     
-    // 1. Root: Place in corner
-    SGTransformNode transRoot = new SGTransformNode("Transform Root", Mat4Transform.translate(-8f, 0f, -8f));
+    SGTransformNode transRoot = new SGTransformNode("Transform Root", Mat4Transform.translate(-8f, -1f, -8f));
     
-    // 2. Base
     SGNameNode baseNode = new SGNameNode("Base");
     Mat4 baseM = Mat4Transform.translate(0, 1f, 0);
-    baseM = Mat4.multiply(baseM, Mat4Transform.scale(2f, 2f, 2f));
+    baseM = Mat4.multiply(baseM, Mat4Transform.scale(1f, 1f, 1f));
     SGTransformNode baseTransform = new SGTransformNode("Base Scale", baseM);
     SGModelNode baseShape = new SGModelNode("Base Shape", sphere);
 
-    // 3. Pole
     SGNameNode poleNode = new SGNameNode("Pole");
     Mat4 poleM = Mat4Transform.translate(0, 6f, 0); 
     poleM = Mat4.multiply(poleM, Mat4Transform.scale(0.5f, 10f, 0.5f)); 
     SGTransformNode poleTransform = new SGTransformNode("Pole Scale", poleM);
     SGModelNode poleShape = new SGModelNode("Pole Shape", sphere);
 
-    // 4. Arm
     SGNameNode armNode = new SGNameNode("Arm");
     Mat4 armM = Mat4Transform.translate(2f, 10.5f, 0f); 
     armM = Mat4.multiply(armM, Mat4Transform.scale(4f, 0.5f, 0.5f)); 
     SGTransformNode armTransform = new SGTransformNode("Arm Scale", armM);
     SGModelNode armShape = new SGModelNode("Arm Shape", sphere);
 
-    // 5. Head (Rotates)
     SGNameNode headNode = new SGNameNode("Head");
     headTransform = new SGTransformNode("Head Rotation", Mat4Transform.translate(4f, 10.5f, 0f));
     
-    // Housing
     Mat4 headScaleM = Mat4Transform.scale(1.5f, 1.5f, 1.5f);
     SGTransformNode headScale = new SGTransformNode("Head Scale", headScaleM);
     SGModelNode headShape = new SGModelNode("Head Shape", sphere);
 
-    // 6. Bulb (Emissive, at the bottom of the head)
-    Mat4 bulbM = Mat4Transform.translate(0f, -0.6f, 0f); // Stick out slightly
+    Mat4 bulbM = Mat4Transform.translate(0f, -0.6f, 0f); 
     bulbM = Mat4.multiply(bulbM, Mat4Transform.scale(0.8f, 0.5f, 0.8f));
     SGTransformNode bulbTrans = new SGTransformNode("Bulb Trans", bulbM);
     SGModelNode bulbShape = new SGModelNode("Bulb Shape", bulb);
 
-    // Tree Construction
     spotlightRoot.addChild(transRoot);
       transRoot.addChild(baseNode);
         baseNode.addChild(baseTransform);
@@ -115,7 +103,7 @@ public class Spotlight {
         headNode.addChild(headTransform);
           headTransform.addChild(headScale);
             headScale.addChild(headShape);
-          headTransform.addChild(bulbTrans); // Add bulb to rotating head
+          headTransform.addChild(bulbTrans); 
             bulbTrans.addChild(bulbShape);
             
     spotlightRoot.update();
@@ -137,7 +125,6 @@ public class Spotlight {
     Mesh mesh = new Mesh(gl, Sphere.vertices.clone(), Sphere.indices.clone());
     Mat4 modelMatrix = new Mat4(1);
     Shader shader = new Shader(gl, "assets/shaders/vs_standard.txt", "assets/shaders/fs_standard_d.txt");
-    // Emissive material (High emission value)
     Material material = new Material(new Vec3(1f, 1f, 1f), new Vec3(1f, 1f, 1f), new Vec3(1f, 1f, 1f), new Vec3(1f, 1f, 1f), 32.0f);
     material.setDiffuseMap(diffuse);
     Renderer renderer = new Renderer();

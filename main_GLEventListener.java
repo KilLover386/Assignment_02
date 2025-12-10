@@ -58,9 +58,9 @@ public class main_GLEventListener implements GLEventListener {
 
   private Model statue1, statue2, statue3;
   // Positions
-  private Vec3 statue1Pos = new Vec3(3, 0.5f, 0);
-  private Vec3 statue2Pos = new Vec3(-3f, 0.5f, 3f);
-  private Vec3 statue3Pos = new Vec3(-3f, 0.5f, -3f);
+  private Vec3 statue1Pos = new Vec3(4, 0.5f, 0);
+  private Vec3 statue2Pos = new Vec3(-2, 0.5f, -3);
+  private Vec3 statue3Pos = new Vec3(-2, 0.5f, 3);
 
   private Floor floor;
   private Walls walls;
@@ -101,11 +101,11 @@ public class main_GLEventListener implements GLEventListener {
 
     // Waypoints for continuous flight
     waypoints = new Vec3[] {
-      new Vec3(statue1Pos.x + 2, 3, statue1Pos.z), // Near Statue 1
-      new Vec3(0, 5, 0),                           // Center/High
-      new Vec3(statue2Pos.x, 3, statue2Pos.z + 2), // Near Statue 2
-      new Vec3(0, 2, -5),                          // Random spot
-      new Vec3(statue3Pos.x + 2, 3, statue3Pos.z)  // Near Statue 3
+      new Vec3(statue1Pos.x, 3, statue1Pos.z), // Near Statue 1
+      new Vec3(statue2Pos.x, 2, statue2Pos.z), // Near Statue 2
+      new Vec3(0, 5,0),                      // Center/High
+      new Vec3(statue3Pos.x, 3, statue3Pos.z),  // Near Statue 3
+      new Vec3(4, 2, 4)                       // Random spot
     };
 
     // Materials
@@ -124,7 +124,8 @@ public class main_GLEventListener implements GLEventListener {
     spotMat.setDiffuse(1.0f, 1.0f, 1.0f); 
     spotMat.setSpecular(1.0f, 1.0f, 1.0f);
     spotlightLight.setMaterial(spotMat);
-    spotlightLight.setCutoff((float)Math.cos(Math.toRadians(15.0))); 
+    // Angle 25 degrees covers more ground
+    spotlightLight.setCutoff((float)Math.cos(Math.toRadians(25.0))); 
     Renderer.spotlight = spotlightLight;
 
     // Objects
@@ -140,11 +141,11 @@ public class main_GLEventListener implements GLEventListener {
 
     Mat4 mSphere2 = Mat4Transform.translate(statue2Pos);
     mSphere2 = Mat4.multiply(Mat4Transform.scale(1.5f,3f,1.5f),mSphere2);
-    statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("stone"), null, null, mMetal);
+    statue2 = makeSphere(gl, mSphere2, "assets/shaders/fs_standard_d.txt", textures.get("wood"), null, null, mMetal);
 
     Mat4 mSphere3 = Mat4Transform.translate(statue3Pos);
     mSphere3 = Mat4.multiply(Mat4Transform.scale(2f,4f,2f),mSphere3);
-    statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("wood"), null, null, mWood);
+    statue3 = makeSphere(gl, mSphere3, "assets/shaders/fs_standard_d.txt", textures.get("stone"), null, null, mWood);
   
     bee.setPosition(waypoints[0].x, waypoints[0].y, waypoints[0].z);              
   }
@@ -163,9 +164,8 @@ public class main_GLEventListener implements GLEventListener {
     // Tell the light if the Bulb is ON
     spotlightLight.setOn(spotLightOn);
 
-    // Light Handling [FIX]
     if (!lightOn) {
-        // Dim the scene (Moonlight effect) instead of full black
+        // Dim the scene (Moonlight effect)
         light.getMaterial().setDiffuse(0.2f, 0.2f, 0.2f); 
         light.getMaterial().setSpecular(0.2f, 0.2f, 0.2f);
         light.getMaterial().setAmbient(0.05f, 0.05f, 0.05f);
@@ -176,8 +176,6 @@ public class main_GLEventListener implements GLEventListener {
         light.getMaterial().setSpecular(0.6f, 0.6f, 0.6f);
     }
     
-    //spotlightLight.setOn(spotOn);
-
     floor.render(gl);
     walls.render(gl);
     statue1.render(gl);
@@ -211,25 +209,39 @@ public class main_GLEventListener implements GLEventListener {
   }
 
   public void jumpToPose(int index) {
-      if (animationMode) return;
+      // Force animation off so the bee stays at the pose
+      animationMode = false;
       
       Vec3 target = new Vec3(0,0,0);
       switch(index) {
-          case 0: target = new Vec3(statue1Pos.x + 2.5f, 2, statue1Pos.z); break; 
-          case 1: target = new Vec3(statue2Pos.x, 2, statue2Pos.z + 2.5f); break; 
-          case 2: target = new Vec3(statue3Pos.x + 2.5f, 2, statue3Pos.z); break; 
+          case 0: 
+            target = new Vec3(statue1Pos.x + 2.5f, 2, statue1Pos.z); 
+            break; 
+          case 1: 
+            target = new Vec3(statue2Pos.x, 2, statue2Pos.z + 2.5f); 
+            break; 
+          case 2: 
+            // [FIX] Changed logic: 
+            // 1. Used Z-axis offset (instead of X) to be symmetric with Statue 2.
+            // 2. Reduced offset from 2.5 to 2.0 to bring bee closer.
+            target = new Vec3(statue3Pos.x, 2, statue3Pos.z - 2.0f); 
+            break; 
       }
       bee.setPosition(target.x, target.y, target.z);
-      bee.setRotationAngle(90f); // Ensure it stays horizontal
   }
 
   private void checkProximity() {
     Vec3 beePos = bee.getPosition();
     float threshold = 3.0f; 
 
-    boolean near1 = updateStatueTexture(statue1, statue1Pos, beePos, "metal", threshold);
-    boolean near2 = updateStatueTexture(statue2, statue2Pos, beePos, "stone", threshold);
-    boolean near3 = updateStatueTexture(statue3, statue3Pos, beePos, "wood", threshold);
+    // Targets are the "Head" of the statue (Top), not the center/feet
+    Vec3 s1Head = new Vec3(statue1Pos.x, statue1Pos.y + 2.0f, statue1Pos.z);
+    Vec3 s2Head = new Vec3(statue2Pos.x, statue2Pos.y + 1.5f, statue2Pos.z);
+    Vec3 s3Head = new Vec3(statue3Pos.x, statue3Pos.y + 2.0f, statue3Pos.z);
+
+    boolean near1 = updateStatueTexture(statue1, s1Head, beePos, "metal", threshold);
+    boolean near2 = updateStatueTexture(statue2, s2Head, beePos, "wood", threshold);
+    boolean near3 = updateStatueTexture(statue3, s3Head, beePos, "stone", threshold);
 
     bee.reactToProximity(near1 || near2 || near3);
   }
@@ -242,8 +254,8 @@ public class main_GLEventListener implements GLEventListener {
 
     if (dist < threshold) {
       if (originalTex.equals("metal")) { statue.getMaterial().setDiffuseMap(textures.get("metal2")); }
-      else if (originalTex.equals("stone")) { statue.getMaterial().setDiffuseMap(textures.get("stone2")); }
-      else if (originalTex.equals("wood")) {statue.getMaterial().setDiffuseMap(textures.get("wood2"));}
+      else if (originalTex.equals("wood")) { statue.getMaterial().setDiffuseMap(textures.get("wood2")); }
+      else if (originalTex.equals("stone")) {statue.getMaterial().setDiffuseMap(textures.get("stone2"));}
       return true;
     } else {
       statue.getMaterial().setDiffuseMap(textures.get(originalTex));
@@ -265,8 +277,8 @@ public class main_GLEventListener implements GLEventListener {
   }
 
   public void toggleGlobalLight() { lightOn = !lightOn; }
-  public void toggleSpotLight()   { spotLightOn = !spotLightOn; } // Bulb
-  public void toggleSpotAnim()    { spotAnimOn = !spotAnimOn; }   // Motor
+  public void toggleSpotLight()   { spotLightOn = !spotLightOn; } 
+  public void toggleSpotAnim()    { spotAnimOn = !spotAnimOn; }   
   public void toggleAnimationMode() { animationMode = !animationMode; }
 
   private double startTime;
